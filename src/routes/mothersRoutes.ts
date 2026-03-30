@@ -1,0 +1,167 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { validate } from '../middleware/validate';
+import { requireAuth, requireRole } from '../middleware/auth';
+import { createMother, getMother, addChild, archiveMotherIfEligible, getGuidance } from '../controllers/mothersController';
+import { createAppointment } from '../controllers/appointmentsController';
+
+const router = Router();
+
+const motherSchema = z.object({
+  body: z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    phone: z.string().min(5),
+    dateOfBirth: z.string().datetime().optional(),
+    pregnancyWeeks: z.number().int().min(0).optional(),
+    parity: z.number().int().min(0).optional(),
+    riskFlags: z.array(z.string()).optional(),
+    preferredLanguage: z.string().optional(),
+    appOptIn: z.boolean().optional(),
+    babyNickname: z.string().optional(),
+    assignedDoctor: z.string().optional(),
+    assignedCHW: z.string().optional(),
+  }),
+});
+
+const childSchema = z.object({
+  body: z.object({
+    name: z.string().optional(),
+    dateOfBirth: z.string().datetime(),
+    sex: z.enum(['female', 'male']).optional(),
+  }),
+});
+
+const appointmentSchema = z.object({
+  body: z.object({
+    type: z.enum(['ANC', 'PNC', 'VACCINE', 'OTHER']),
+    scheduledFor: z.string().datetime(),
+    child: z.string().optional(),
+    notes: z.string().optional(),
+  }),
+});
+
+/**
+ * @openapi
+ * /api/mothers:
+ *   post:
+ *     summary: Register a new mother
+ *     tags: [Mothers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Mother'
+ *     responses:
+ *       201:
+ *         description: Mother registered successfully
+ */
+router.post('/', requireAuth, requireRole('admin', 'doctor', 'chw'), validate(motherSchema), createMother);
+
+/**
+ * @openapi
+ * /api/mothers/{id}:
+ *   get:
+ *     summary: Get mother details
+ *     tags: [Mothers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Mother details
+ *       404:
+ *         description: Mother not found
+ */
+router.get('/:id', requireAuth, requireRole('admin', 'doctor', 'chw'), getMother);
+
+/**
+ * @openapi
+ * /api/mothers/{id}/children:
+ *   post:
+ *     summary: Add a child to a mother
+ *     tags: [Mothers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Child added successfully
+ */
+router.post('/:id/children', requireAuth, requireRole('admin', 'doctor', 'chw'), validate(childSchema), addChild);
+
+/**
+ * @openapi
+ * /api/mothers/{id}/appointments:
+ *   post:
+ *     summary: Schedule an appointment for a mother
+ *     tags: [Mothers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Appointment scheduled
+ */
+router.post('/:id/appointments', requireAuth, requireRole('admin', 'doctor'), validate(appointmentSchema), createAppointment);
+
+/**
+ * @openapi
+ * /api/mothers/{id}/archive-if-eligible:
+ *   post:
+ *     summary: Archive mother if all children are over 2 years old
+ *     tags: [Mothers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Archiving status
+ */
+router.post('/:id/archive-if-eligible', requireAuth, requireRole('admin'), archiveMotherIfEligible);
+
+/**
+ * @openapi
+ * /api/mothers/{id}/guidance:
+ *   get:
+ *     summary: Get stage-specific guidance for a mother
+ *     tags: [Mothers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Guidance messages
+ */
+router.get('/:id/guidance', requireAuth, requireRole('admin', 'doctor', 'chw'), getGuidance);
+
+export default router;
+
