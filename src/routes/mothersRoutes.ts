@@ -29,6 +29,13 @@ const motherSchema = z.object({
     babyNickname: z.string().optional(),
     assignedDoctor: z.string().optional(),
     assignedCHW: z.string().optional(),
+    hasChildUnderTwo: z.boolean().optional(),
+    existingChildren: z.array(z.object({
+      name: z.string().optional(),
+      dateOfBirth: z.string().datetime(),
+      sex: z.enum(['female', 'male']).optional(),
+      weightKg: z.number().min(0).optional(),
+    })).optional(),
   }),
 });
 

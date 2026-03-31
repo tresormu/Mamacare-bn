@@ -5,6 +5,7 @@ import {
   createCheckoutSession,
   createCheckoutSchema,
   flutterwaveWebhook,
+  getSubscription,
   listPaymentPlans,
   listTransactions,
   listTransactionsSchema,
@@ -31,6 +32,20 @@ const router = Router();
  *                 $ref: '#/components/schemas/PaymentPlan'
  */
 router.get('/plans', listPaymentPlans);
+
+/**
+ * @openapi
+ * /api/payment/subscription:
+ *   get:
+ *     summary: Get current user active subscription status
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Subscription status
+ */
+router.get('/subscription', requireAuth, getSubscription);
 
 /**
  * @openapi
