@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest --watchAll --no-cache",
-    "seed:plans": "ts-node src/scripts/seedPlans.ts"
+    "seed:plans": "node dist/scripts/seedPlans.js"
   },
   "engines": {
     "node": ">=18"
@@ -26,6 +26,7 @@
     "morgan": "^1.10.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "typescript": "^5.5.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {
