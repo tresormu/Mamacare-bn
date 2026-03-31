@@ -8,7 +8,7 @@ import { User } from '../models/User';
 import { createFlutterwavePayment, getFlutterwaveConfig, verifyFlutterwaveTransaction } from '../utils/flutterwave';
 import { generateTransactionRef } from '../utils/transactionRef';
 
-const DEFAULT_PLANS = [
+export const DEFAULT_PLANS = [
   {
     name: 'Health Center',
     slug: 'health-center',
@@ -21,6 +21,7 @@ const DEFAULT_PLANS = [
       'SMS reminders (limited)',
       'Pregnancy + vaccination tracking',
     ],
+    isActive: true,
   },
   {
     name: 'District Hospital',
@@ -35,6 +36,7 @@ const DEFAULT_PLANS = [
       'Baby tracking (0-2 years)',
       'Staff dashboard (multi-user)',
     ],
+    isActive: true,
   },
   {
     name: 'Referral / Private Hospital',
@@ -49,6 +51,7 @@ const DEFAULT_PLANS = [
       'Advanced analytics dashboard',
       'Priority support',
     ],
+    isActive: true,
   },
 ];
 

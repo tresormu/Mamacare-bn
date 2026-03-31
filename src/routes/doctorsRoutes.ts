@@ -6,6 +6,20 @@ const router = Router();
 
 /**
  * @openapi
+ * /api/doctors/chws:
+ *   get:
+ *     summary: List all CHW users (accessible to doctors)
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of CHWs
+ */
+router.get('/chws', requireAuth, requireRole('doctor', 'admin', 'chw'), doctorsController.getChws);
+
+/**
+ * @openapi
  * /api/doctors/my-mothers:
  *   get:
  *     summary: List mothers assigned to the logged-in doctor

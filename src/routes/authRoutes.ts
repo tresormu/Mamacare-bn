@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validate';
-import { login, loginSchema, me, register, registerSchema } from '../controllers/authController';
+import { login, loginSchema, me, logout, register, registerSchema, updateProfile } from '../controllers/authController';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -78,6 +78,34 @@ router.post('/login', authLimiter, validate(loginSchema), login);
  *         description: Unauthorized
  */
 router.get('/me', requireAuth, me);
+
+/**
+ * @openapi
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout (invalidates session client-side, confirms server receipt)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ */
+router.post('/logout', requireAuth, logout);
+
+/**
+ * @openapi
+ * /api/auth/profile:
+ *   patch:
+ *     summary: Update logged-in user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ */
+router.patch('/profile', requireAuth, updateProfile);
 
 export default router;
 

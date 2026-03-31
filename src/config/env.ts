@@ -8,14 +8,13 @@ const required = [
   'FLW_SECRET_KEY',
   'FLW_SECRET_HASH',
   'FLW_REDIRECT_URL',
-  'MAMACARE_AI_KEY',
+  'MAMACARE',
 ] as const;
 for (const key of required) {
   if (!process.env[key]) {
     throw new Error(`Missing required env var: ${key}`);
   }
 }
-
 export const env = process.env.NODE_ENV || 'development';
 export const port = Number(process.env.PORT || 4000);
 export const mongoUri = process.env.MONGODB_URI as string;

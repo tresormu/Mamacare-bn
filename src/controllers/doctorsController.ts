@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { Mother } from '../models/Mother';
 import { Appointment } from '../models/Appointment';
+import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { ApiError } from '../middleware/error';
 
@@ -78,6 +79,15 @@ export async function getDoctorSummary(req: AuthRequest, res: Response, next: Ne
       },
       timestamp: new Date()
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getChws(_req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const chws = await User.find({ role: 'chw' }).select('-password');
+    res.status(200).json(chws);
   } catch (err) {
     next(err);
   }

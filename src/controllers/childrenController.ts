@@ -17,6 +17,37 @@ const VACCINE_MILESTONES = [
   { slug: 'Deworming (2y)', weeks: 104 },
 ];
 
+export async function listAllChildren(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const skip = (page - 1) * limit;
+
+    const children = await Child.find()
+      .populate('mother', 'firstName lastName phone missedAppointmentsCount riskFlags')
+      .sort({ dateOfBirth: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Attach next scheduled vaccine appointment for each child
+    const now = new Date();
+    const enriched = await Promise.all(
+      children.map(async (child) => {
+        const nextAppt = await Appointment.findOne({
+          child: child._id,
+          status: 'scheduled',
+          scheduledFor: { $gte: now },
+        }).sort({ scheduledFor: 1 }).select('notes scheduledFor');
+        return { ...child.toObject(), nextAppointment: nextAppt };
+      })
+    );
+
+    res.status(200).json(enriched);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function registerChild(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { motherId, name, dateOfBirth, sex } = req.body;

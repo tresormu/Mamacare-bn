@@ -83,7 +83,6 @@ router.post('/plans/seed', requireAuth, requireRole('admin'), seedPaymentPlans);
 router.post(
   '/checkout-session',
   requireAuth,
-  requireRole('admin'),
   validate(createCheckoutSchema),
   createCheckoutSession
 );

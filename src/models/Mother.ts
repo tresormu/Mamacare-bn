@@ -98,7 +98,6 @@ const MotherSchema = new Schema<IMother>(
  *           type: string
  */
 
-MotherSchema.index({ phone: 1 }, { unique: true });
 MotherSchema.index({ assignedDoctor: 1 });
 MotherSchema.index({ assignedCHW: 1 });
 

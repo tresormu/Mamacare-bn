@@ -6,6 +6,20 @@ const router = Router();
 
 /**
  * @openapi
+ * /api/children:
+ *   get:
+ *     summary: List all children with mother info and next vaccine appointment
+ *     tags: [Children]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all children
+ */
+router.get('/', requireAuth, requireRole('admin', 'doctor', 'chw'), childrenController.listAllChildren);
+
+/**
+ * @openapi
  * /api/children/register:
  *   post:
  *     summary: Register a new child and create vaccination schedule
