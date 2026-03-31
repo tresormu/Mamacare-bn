@@ -26,7 +26,7 @@ export function createApp() {
 
   app.use(helmet());
   app.use(cors({
-    origin: allowedOrigins,
+    origin: [],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
