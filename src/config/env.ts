@@ -20,3 +20,4 @@ export const port = Number(process.env.PORT || 4000);
 export const mongoUri = process.env.MONGODB_URI as string;
 export const jwtSecret = process.env.JWT_SECRET as string;
 export const allowedOrigins = process.env.ALLOWED_ORIGINS!.split(',').map(o => o.trim());
+export const mamacareAiKey = process.env.MAMACARE_AI_KEY as string;

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validate';
-import { login, loginSchema, me, logout, register, registerSchema, updateProfile } from '../controllers/authController';
+import { login,updateProfile, logout,loginSchema, me, register, registerSchema, activatePatient,activatePatientSchema } from '../controllers/authController';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -106,6 +106,7 @@ router.post('/logout', requireAuth, logout);
  *         description: Profile updated
  */
 router.patch('/profile', requireAuth, updateProfile);
+router.post('/patient/activate', authLimiter, validate(activatePatientSchema), activatePatient);
 
 export default router;
 

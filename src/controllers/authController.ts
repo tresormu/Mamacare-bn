@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { jwtSecret } from '../config/env';
 import { User, UserRole } from '../models/User';
+import { Mother } from '../models/Mother';
 import { ApiError } from '../middleware/error';
 import { AuthRequest, TokenType } from '../middleware/auth';
 
@@ -51,7 +52,6 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     if (!ok) throw new ApiError('Invalid credentials', 401);
 
     const token = signToken(user._id.toString(), user.role, tokenTypeForRole(user.role));
-
     res.status(200).json({
       user: { id: user._id, name: user.name, email: user.email, role: user.role },
       token,
@@ -126,9 +126,38 @@ export async function updateProfile(req: AuthRequest, res: Response, next: NextF
 }
 
 export async function logout(_req: AuthRequest, res: Response) {
-  // JWT is stateless — logout is handled client-side by discarding the token.
-  // This endpoint exists so the network tab shows a logout call.
   res.status(200).json({ message: 'Logged out successfully' });
+}
+
+export async function activatePatient(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { phone, pinCode, password } = req.body;
+
+    const mother = await Mother.findOne({ phone }).select('+pinCode +password');
+    if (!mother) throw new ApiError('Invalid phone or PIN', 401);
+    if (mother.isActive) throw new ApiError('Account already activated', 409);
+
+    const pinOk = await mother.comparePin(pinCode);
+    if (!pinOk) throw new ApiError('Invalid phone or PIN', 401);
+
+    mother.password = password;
+    mother.isActive = true;
+    mother.pinCode = undefined;
+    await mother.save();
+
+    const token = jwt.sign(
+      { id: mother._id, role: 'mother', tokenType: 'mother' },
+      jwtSecret,
+      { expiresIn: TTL.mother }
+    );
+    res.status(200).json({
+      message: 'Account activated successfully',
+      token,
+      patient: { id: mother._id, firstName: mother.firstName, lastName: mother.lastName, phone: mother.phone },
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 const passwordSchema = z
@@ -152,5 +181,13 @@ export const loginSchema = z.object({
   body: z.object({
     email: z.string().email(),
     password: z.string().min(6),
+  }),
+});
+
+export const activatePatientSchema = z.object({
+  body: z.object({
+    phone: z.string().min(5),
+    pinCode: z.string().length(6),
+    password: passwordSchema,
   }),
 });
