@@ -131,7 +131,6 @@ MotherSchema.methods.comparePassword = function (candidate: string) {
   return bcrypt.compare(candidate, this.password!);
 };
 
-MotherSchema.index({ phone: 1 }, { unique: true });
 MotherSchema.index({ assignedDoctor: 1 });
 MotherSchema.index({ assignedCHW: 1 });
 
