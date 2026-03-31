@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 export interface IMother extends Document {
   firstName: string;
@@ -17,10 +18,15 @@ export interface IMother extends Document {
   appOptIn: boolean;
   babyNickname?: string;
   hasChildUnderTwo: boolean;
+  pinCode?: string;
+  password?: string;
+  isActive: boolean;
   status: 'active' | 'archived';
   archivedAt?: Date;
   assignedDoctor?: Types.ObjectId;
   assignedCHW?: Types.ObjectId;
+  comparePin(candidate: string): Promise<boolean>;
+  comparePassword(candidate: string): Promise<boolean>;
 }
 
 const MotherSchema = new Schema<IMother>(
@@ -41,6 +47,9 @@ const MotherSchema = new Schema<IMother>(
     appOptIn: { type: Boolean, default: false },
     babyNickname: { type: String, trim: true },
     hasChildUnderTwo: { type: Boolean, default: false },
+    pinCode: { type: String, select: false },
+    password: { type: String, select: false },
+    isActive: { type: Boolean, default: false },
     status: { type: String, enum: ['active', 'archived'], default: 'active' },
     archivedAt: { type: Date },
     assignedDoctor: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -101,6 +110,24 @@ const MotherSchema = new Schema<IMother>(
  *         assignedCHW:
  *           type: string
  */
+
+MotherSchema.pre('save', async function (next) {
+  if (this.isModified('pinCode') && this.pinCode) {
+    this.pinCode = await bcrypt.hash(this.pinCode, 10);
+  }
+  if (this.isModified('password') && this.password) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  next();
+});
+
+MotherSchema.methods.comparePin = function (candidate: string) {
+  return bcrypt.compare(candidate, this.pinCode);
+};
+
+MotherSchema.methods.comparePassword = function (candidate: string) {
+  return bcrypt.compare(candidate, this.password!);
+};
 
 MotherSchema.index({ phone: 1 }, { unique: true });
 MotherSchema.index({ assignedDoctor: 1 });

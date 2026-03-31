@@ -1,9 +1,14 @@
 import { Response, NextFunction } from 'express';
+import bcrypt from 'bcryptjs';
 import { Mother } from '../models/Mother';
 import { Child } from '../models/Child';
 import { Appointment } from '../models/Appointment';
 import { ApiError } from '../middleware/error';
 import { AuthRequest } from '../middleware/auth';
+
+function generatePin(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 export async function createMother(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -13,11 +18,16 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
       babyNickname, assignedDoctor, assignedCHW, hasChildUnderTwo, existingChildren,
     } = req.body;
 
+    const plainPin = generatePin();
+    const hashedPin = await bcrypt.hash(plainPin, 10);
+
     const mother = await Mother.create({
       firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
       babyNickname, assignedDoctor, assignedCHW,
       hasChildUnderTwo: hasChildUnderTwo ?? (Array.isArray(existingChildren) && existingChildren.length > 0),
+      pinCode: hashedPin,
+      isActive: false,
     });
 
     let children: any[] = [];
@@ -27,7 +37,7 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
       );
     }
 
-    res.status(201).json({ ...mother.toObject(), children });
+    res.status(201).json({ ...mother.toObject(), children, pinCode: plainPin });
   } catch (err) {
     next(err);
   }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validate';
-import { login, loginSchema, me, register, registerSchema } from '../controllers/authController';
+import { login, loginSchema, me, register, registerSchema, activatePatient, activatePatientSchema } from '../controllers/authController';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -78,6 +78,33 @@ router.post('/login', authLimiter, validate(loginSchema), login);
  *         description: Unauthorized
  */
 router.get('/me', requireAuth, me);
+
+/**
+ * @openapi
+ * /api/auth/patient/activate:
+ *   post:
+ *     summary: Activate patient account using PIN from doctor
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phone, pinCode, password]
+ *             properties:
+ *               phone: { type: string }
+ *               pinCode: { type: string, minLength: 6, maxLength: 6 }
+ *               password: { type: string }
+ *     responses:
+ *       200:
+ *         description: Account activated, JWT returned
+ *       401:
+ *         description: Invalid phone or PIN
+ *       409:
+ *         description: Account already activated
+ */
+router.post('/patient/activate', authLimiter, validate(activatePatientSchema), activatePatient);
 
 export default router;
 
