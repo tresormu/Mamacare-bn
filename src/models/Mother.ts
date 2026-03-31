@@ -16,6 +16,7 @@ export interface IMother extends Document {
   notificationChannel: 'app' | 'sms' | 'voice';
   appOptIn: boolean;
   babyNickname?: string;
+  hasChildUnderTwo: boolean;
   status: 'active' | 'archived';
   archivedAt?: Date;
   assignedDoctor?: Types.ObjectId;
@@ -39,6 +40,7 @@ const MotherSchema = new Schema<IMother>(
     notificationChannel: { type: String, enum: ['app', 'sms', 'voice'], default: 'app' },
     appOptIn: { type: Boolean, default: false },
     babyNickname: { type: String, trim: true },
+    hasChildUnderTwo: { type: Boolean, default: false },
     status: { type: String, enum: ['active', 'archived'], default: 'active' },
     archivedAt: { type: Date },
     assignedDoctor: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -89,6 +91,8 @@ const MotherSchema = new Schema<IMother>(
  *           type: boolean
  *         babyNickname:
  *           type: string
+ *         hasChildUnderTwo:
+ *           type: boolean
  *         status:
  *           type: string
  *           enum: [active, archived]

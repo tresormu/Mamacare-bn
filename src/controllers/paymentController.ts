@@ -165,8 +165,46 @@ export async function listTransactions(req: AuthRequest, res: Response, next: Ne
     if (status) filter.status = status;
     const transactions = await PaymentTransaction.find(filter)
       .sort({ createdAt: -1 })
-      .populate('plan', 'name slug price currency');
+      .populate('plan', 'name slug price currency maxActiveMothers features description');
     res.status(200).json(transactions);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getSubscription(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) throw new ApiError('Unauthorized', 401);
+
+    // Get the latest completed transaction for this user
+    const latest = await PaymentTransaction.findOne({ user: req.user.id, status: 'completed' })
+      .sort({ paidAt: -1 })
+      .populate('plan', 'name slug price currency maxActiveMothers features description');
+
+    if (!latest || !latest.paidAt) {
+      return res.status(200).json({ active: false, subscription: null });
+    }
+
+    // Subscription is monthly — expires 30 days after paidAt
+    const expiresAt = new Date(latest.paidAt);
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const now = new Date();
+    const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const active = daysLeft > 0;
+
+    res.status(200).json({
+      active,
+      daysLeft: active ? daysLeft : 0,
+      expiresAt,
+      subscription: {
+        txRef: latest.txRef,
+        amount: latest.amount,
+        currency: latest.currency,
+        paidAt: latest.paidAt,
+        plan: latest.plan,
+      },
+    });
   } catch (err) {
     next(err);
   }

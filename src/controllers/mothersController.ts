@@ -10,14 +10,24 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
     const {
       firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
-      babyNickname, assignedDoctor, assignedCHW,
+      babyNickname, assignedDoctor, assignedCHW, hasChildUnderTwo, existingChildren,
     } = req.body;
+
     const mother = await Mother.create({
       firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
       babyNickname, assignedDoctor, assignedCHW,
+      hasChildUnderTwo: hasChildUnderTwo ?? (Array.isArray(existingChildren) && existingChildren.length > 0),
     });
-    res.status(201).json(mother);
+
+    let children: any[] = [];
+    if (Array.isArray(existingChildren) && existingChildren.length > 0) {
+      children = await Child.insertMany(
+        existingChildren.map((c: any) => ({ ...c, mother: mother._id }))
+      );
+    }
+
+    res.status(201).json({ ...mother.toObject(), children });
   } catch (err) {
     next(err);
   }
