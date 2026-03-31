@@ -25,6 +25,7 @@ export interface IMother extends Document {
   archivedAt?: Date;
   assignedDoctor?: Types.ObjectId;
   assignedCHW?: Types.ObjectId;
+  hospital?: string;
   comparePin(candidate: string): Promise<boolean>;
   comparePassword(candidate: string): Promise<boolean>;
 }
@@ -54,6 +55,7 @@ const MotherSchema = new Schema<IMother>(
     archivedAt: { type: Date },
     assignedDoctor: { type: Schema.Types.ObjectId, ref: 'User' },
     assignedCHW: { type: Schema.Types.ObjectId, ref: 'User' },
+    hospital: { type: String, trim: true, index: true },
   },
   { timestamps: true }
 );

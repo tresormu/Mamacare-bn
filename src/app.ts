@@ -35,6 +35,7 @@ export function createApp() {
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later.' },
+    skip: (req) => req.path === '/api/dashboard/sse', // SSE is long-lived, skip rate limiting
   });
   app.use(globalLimiter);
 

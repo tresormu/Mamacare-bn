@@ -11,12 +11,16 @@ export interface AuthRequest extends Request {
 
 export async function requireAuth(req: AuthRequest, _res: Response, next: NextFunction) {
   try {
+    // Support token via Authorization header OR ?token= query param (needed for SSE/EventSource)
     const header = req.headers.authorization;
-    if (!header?.startsWith('Bearer ')) {
+    const queryToken = req.query.token as string | undefined;
+    const raw = header?.startsWith('Bearer ') ? header.split(' ')[1] : queryToken;
+
+    if (!raw) {
       return next(Object.assign(new Error('Missing or invalid Authorization header'), { statusCode: 401 }));
     }
 
-    const token = header.split(' ')[1];
+    const token = raw;
     const payload = jwt.verify(token, jwtSecret) as { id: string; role: UserRole; tokenType: TokenType };
 
     const user = await User.findById(payload.id);

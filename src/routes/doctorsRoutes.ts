@@ -20,6 +20,27 @@ router.get('/chws', requireAuth, requireRole('doctor', 'admin', 'chw'), doctorsC
 
 /**
  * @openapi
+ * /api/doctors/my-patients:
+ *   get:
+ *     summary: List all patients in the logged-in doctor's hospital (from token)
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Paginated list of patients in the doctor's hospital
+ */
+/**
+ * @openapi
  * /api/doctors/my-mothers:
  *   get:
  *     summary: List mothers assigned to the logged-in doctor

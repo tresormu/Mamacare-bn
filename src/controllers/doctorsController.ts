@@ -14,10 +14,17 @@ export async function getMyMothers(req: AuthRequest, res: Response, next: NextFu
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const skip = (page - 1) * limit;
 
-    const mothers = await Mother.find({ assignedDoctor: doctorId, status: 'active' })
-      .skip(skip)
-      .limit(limit);
-    res.status(200).json(mothers);
+    const doctor = await User.findById(doctorId).select('hospitalName');
+    const filter: Record<string, any> = { status: 'active' };
+    if (doctor?.hospitalName) filter.hospital = doctor.hospitalName;
+    else filter.assignedDoctor = doctorId; // fallback if no hospitalName set
+
+    const [mothers, total] = await Promise.all([
+      Mother.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Mother.countDocuments(filter),
+    ]);
+
+    res.status(200).json({ data: mothers, total, page, limit });
   } catch (err) {
     next(err);
   }
@@ -56,19 +63,17 @@ export async function getDoctorSummary(req: AuthRequest, res: Response, next: Ne
     const doctorId = req.user?.id;
     if (!doctorId) throw new ApiError('Unauthorized', 401);
 
-    const myMothers = await Mother.find({ assignedDoctor: doctorId });
+    const doctor = await User.findById(doctorId).select('hospitalName');
+    const hospitalFilter = doctor?.hospitalName ? { hospital: doctor.hospitalName } : { assignedDoctor: doctorId };
+
+    const myMothers = await Mother.find(hospitalFilter).select('_id riskFlags');
     const motherIds = myMothers.map(m => m._id);
 
-    const [missedCount, highRiskCount] = await Promise.all([
-      Appointment.countDocuments({
-        mother: { $in: motherIds },
-        status: 'missed'
-      }),
-      Mother.countDocuments({
-        assignedDoctor: doctorId,
-        riskFlags: { $not: { $size: 0 } },
-        status: 'active'
-      })
+    const { FollowUp } = await import('../models/FollowUp');
+    const [missedCount, highRiskCount, chwTasks] = await Promise.all([
+      Appointment.countDocuments({ mother: { $in: motherIds }, status: 'missed' }),
+      myMothers.filter(m => m.riskFlags.length > 0).length,
+      FollowUp.countDocuments({ mother: { $in: motherIds }, status: 'open' }),
     ]);
 
     res.status(200).json({
@@ -76,6 +81,7 @@ export async function getDoctorSummary(req: AuthRequest, res: Response, next: Ne
         myTotalPatients: myMothers.length,
         myHighRiskPatients: highRiskCount,
         myMissedAppointments: missedCount,
+        myChwTasks: chwTasks,
       },
       timestamp: new Date()
     });

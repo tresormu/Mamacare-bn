@@ -3,6 +3,10 @@ import bcrypt from 'bcryptjs';
 import { Mother } from '../models/Mother';
 import { Child } from '../models/Child';
 import { Appointment } from '../models/Appointment';
+import { User } from '../models/User';
+import { DoctorAlert } from '../models/DoctorAlert';
+import { sendToDoctor } from '../utils/sseManager';
+import { fireWebhook } from '../utils/webhook';
 import { ApiError } from '../middleware/error';
 import { AuthRequest } from '../middleware/auth';
 
@@ -21,13 +25,21 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
     const plainPin = generatePin();
     const hashedPin = await bcrypt.hash(plainPin, 10);
 
+    const doctorId = assignedDoctor || req.user?.id;
+
+    // Resolve hospital from the registering doctor
+    const registrar = await User.findById(req.user?.id).select('hospitalName');
+    const hospital = registrar?.hospitalName;
+
     const mother = await Mother.create({
       firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
-      babyNickname, assignedDoctor, assignedCHW,
+      babyNickname, assignedCHW,
+      assignedDoctor: doctorId,
       hasChildUnderTwo: hasChildUnderTwo ?? (Array.isArray(existingChildren) && existingChildren.length > 0),
       pinCode: hashedPin,
       isActive: false,
+      hospital,
     });
 
     let children: any[] = [];
@@ -37,7 +49,31 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
       );
     }
 
-    res.status(201).json({ ...mother.toObject(), children, pinCode: plainPin });
+    if (doctorId) {
+      const alert = await DoctorAlert.create({
+        doctor: doctorId,
+        mother: mother._id,
+        motherName: `${firstName} ${lastName}`,
+        motherPhone: phone,
+        pinCode: plainPin,
+      });
+
+      const alertPayload = {
+        alertId: alert._id,
+        motherId: mother._id,
+        motherName: `${firstName} ${lastName}`,
+        motherPhone: phone,
+        pinCode: plainPin,
+        createdAt: alert.createdAt,
+      };
+
+      sendToDoctor(doctorId.toString(), 'pin_alert', alertPayload);
+      fireWebhook({ event: 'pin_alert', ...alertPayload });
+    }
+
+    // Build clean response — exclude hashed pinCode from toObject(), return plain PIN separately
+    const { pinCode: _hashed, password: _pw, ...motherData } = mother.toObject();
+    res.status(201).json({ ...motherData, children, pinCode: plainPin });
   } catch (err) {
     next(err);
   }
@@ -51,8 +87,12 @@ export async function listMothers(req: AuthRequest, res: Response, next: NextFun
     const status = req.query.status as string | undefined;
 
     const filter: Record<string, any> = {};
-    if (status === 'active' || status === 'archived') {
-      filter.status = status;
+    if (status === 'active' || status === 'archived') filter.status = status;
+
+    // Non-admins only see mothers from their hospital
+    if (req.user?.role !== 'admin') {
+      const doctor = await User.findById(req.user?.id).select('hospitalName');
+      if (doctor?.hospitalName) filter.hospital = doctor.hospitalName;
     }
 
     const [mothers, total] = await Promise.all([
@@ -70,6 +110,14 @@ export async function getMother(req: AuthRequest, res: Response, next: NextFunct
   try {
     const mother = await Mother.findById(req.params.id);
     if (!mother) throw new ApiError('Mother not found', 404);
+
+    if (req.user?.role !== 'admin') {
+      const doctor = await User.findById(req.user?.id).select('hospitalName');
+      if (doctor?.hospitalName && mother.hospital !== doctor.hospitalName) {
+        throw new ApiError('Mother not found', 404);
+      }
+    }
+
     res.json(mother);
   } catch (err) {
     next(err);
