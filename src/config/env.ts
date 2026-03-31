@@ -8,7 +8,7 @@ const required = [
   'FLW_SECRET_KEY',
   'FLW_SECRET_HASH',
   'FLW_REDIRECT_URL',
-  'MAMACARE',
+  'MAMACARE_AI_KEY',
 ] as const;
 for (const key of required) {
   if (!process.env[key]) {
