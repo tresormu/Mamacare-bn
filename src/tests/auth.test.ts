@@ -8,8 +8,7 @@ describe('Auth Controller', () => {
   const testUser = {
     name: 'Test Doctor',
     email: 'doctor@example.com',
-    password: 'password123',
-    role: 'doctor',
+    password: 'Password123!',
   };
 
   describe('POST /api/auth/register', () => {
@@ -35,6 +34,25 @@ describe('Auth Controller', () => {
 
       expect(res.status).toBe(409);
       expect(res.body.error).toMatch(/Email already registered/i);
+    });
+  });
+
+  describe('GET /api/auth/me', () => {
+    it('should return current user profile', async () => {
+      const registerRes = await request(app).post('/api/auth/register').send(testUser);
+      const { token } = registerRes.body;
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.email).toBe(testUser.email);
+    });
+
+    it('should reject unauthenticated request', async () => {
+      const res = await request(app).get('/api/auth/me');
+      expect(res.status).toBe(401);
     });
   });
 

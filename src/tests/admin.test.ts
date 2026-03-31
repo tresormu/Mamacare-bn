@@ -41,6 +41,17 @@ describe('Admin Controller', () => {
     });
   });
 
+  describe('GET /api/admin/users/:id', () => {
+    it('should return details for a specific staff member', async () => {
+      const res = await request(app)
+        .get(`/api/admin/users/${doctorId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user?.email ?? res.body.email).toBe('doctor@example.com');
+    });
+  });
+
   describe('PUT /api/admin/users/:id', () => {
     it('should update a staff member name', async () => {
       const res = await request(app)

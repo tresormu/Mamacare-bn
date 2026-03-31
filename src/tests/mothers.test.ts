@@ -37,6 +37,54 @@ describe('Mothers Controller', () => {
     pregnancyWeeks: 20,
   };
 
+  describe('GET /api/mothers', () => {
+    it('should list mothers', async () => {
+      await Mother.create(testMother);
+
+      const res = await request(app)
+        .get('/api/mothers')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data ?? res.body)).toBe(true);
+    });
+  });
+
+  describe('GET /api/mothers/:id', () => {
+    it('should return a single mother', async () => {
+      const mother = await Mother.create(testMother);
+
+      const res = await request(app)
+        .get(`/api/mothers/${mother._id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.firstName).toBe(testMother.firstName);
+    });
+
+    it('should return 404 for unknown id', async () => {
+      const res = await request(app)
+        .get('/api/mothers/000000000000000000000000')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('PATCH /api/mothers/:id', () => {
+    it('should update mother details', async () => {
+      const mother = await Mother.create(testMother);
+
+      const res = await request(app)
+        .patch(`/api/mothers/${mother._id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ firstName: 'Updated' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.firstName).toBe('Updated');
+    });
+  });
+
   describe('POST /api/mothers', () => {
     it('should create a new mother when authorized', async () => {
       const res = await request(app)
@@ -57,6 +105,50 @@ describe('Mothers Controller', () => {
         .send(testMother);
 
       expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /api/mothers/:id/appointments', () => {
+    it('should list appointments for a mother', async () => {
+      const mother = await Mother.create(testMother);
+
+      const res = await request(app)
+        .get(`/api/mothers/${mother._id}/appointments`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+  });
+
+  describe('POST /api/mothers/:id/appointments', () => {
+    it('should schedule an appointment', async () => {
+      const mother = await Mother.create(testMother);
+
+      const res = await request(app)
+        .post(`/api/mothers/${mother._id}/appointments`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          type: 'ANC',
+          scheduledFor: new Date(Date.now() + 86400000).toISOString(),
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.type).toBe('ANC');
+    });
+  });
+
+  describe('POST /api/mothers/:id/children', () => {
+    it('should add a child to a mother', async () => {
+      const mother = await Mother.create(testMother);
+
+      const res = await request(app)
+        .post(`/api/mothers/${mother._id}/children`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ dateOfBirth: new Date().toISOString(), sex: 'female' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.mother.toString()).toBe(mother._id.toString());
     });
   });
 

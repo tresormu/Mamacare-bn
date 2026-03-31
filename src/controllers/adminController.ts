@@ -8,11 +8,18 @@ import { AuthRequest } from '../middleware/auth';
 
 export async function listUsers(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
     // Return all doctors and CHWs, excluding the admin themselves
     const users = await User.find({
       _id: { $ne: req.user?.id },
       role: { $in: ['doctor', 'chw'] }
-    }).select('-password');
+    })
+      .select('-password')
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json(users);
   } catch (err) {
@@ -40,7 +47,12 @@ export async function updateUser(req: AuthRequest, res: Response, next: NextFunc
 
     if (name) user.name = name;
     if (email) user.email = email;
-    if (role) user.role = role;
+    if (role) {
+      if (!['doctor', 'chw'].includes(role)) {
+        throw new ApiError('Invalid role update', 400);
+      }
+      user.role = role;
+    }
 
     await user.save();
 
@@ -57,6 +69,15 @@ export async function deleteUser(req: AuthRequest, res: Response, next: NextFunc
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) throw new ApiError('User not found', 404);
+
+    await Mother.updateMany(
+      { assignedDoctor: user._id },
+      { $set: { assignedDoctor: null } }
+    );
+    await Mother.updateMany(
+      { assignedCHW: user._id },
+      { $set: { assignedCHW: null } }
+    );
 
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (err) {

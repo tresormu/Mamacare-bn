@@ -1,13 +1,46 @@
 import { Response, NextFunction } from 'express';
 import { Mother } from '../models/Mother';
 import { Child } from '../models/Child';
+import { Appointment } from '../models/Appointment';
 import { ApiError } from '../middleware/error';
 import { AuthRequest } from '../middleware/auth';
 
 export async function createMother(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const mother = await Mother.create(req.body);
+    const {
+      firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
+      riskFlags, preferredLanguage, notificationChannel, appOptIn,
+      babyNickname, assignedDoctor, assignedCHW,
+    } = req.body;
+    const mother = await Mother.create({
+      firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
+      riskFlags, preferredLanguage, notificationChannel, appOptIn,
+      babyNickname, assignedDoctor, assignedCHW,
+    });
     res.status(201).json(mother);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listMothers(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+    const status = req.query.status as string | undefined;
+
+    const filter: Record<string, any> = {};
+    if (status === 'active' || status === 'archived') {
+      filter.status = status;
+    }
+
+    const [mothers, total] = await Promise.all([
+      Mother.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Mother.countDocuments(filter),
+    ]);
+
+    res.status(200).json({ data: mothers, total, page, limit });
   } catch (err) {
     next(err);
   }
@@ -34,6 +67,39 @@ export async function addChild(req: AuthRequest, res: Response, next: NextFuncti
     });
 
     res.status(201).json(child);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateMother(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const mother = await Mother.findById(req.params.id);
+    if (!mother) throw new ApiError('Mother not found', 404);
+
+    const {
+      firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
+      riskFlags, preferredLanguage, notificationChannel, appOptIn,
+      babyNickname, assignedDoctor, assignedCHW,
+    } = req.body;
+    Object.assign(mother, {
+      ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+      ...(phone !== undefined && { phone }),
+      ...(dateOfBirth !== undefined && { dateOfBirth }),
+      ...(pregnancyWeeks !== undefined && { pregnancyWeeks }),
+      ...(parity !== undefined && { parity }),
+      ...(riskFlags !== undefined && { riskFlags }),
+      ...(preferredLanguage !== undefined && { preferredLanguage }),
+      ...(notificationChannel !== undefined && { notificationChannel }),
+      ...(appOptIn !== undefined && { appOptIn }),
+      ...(babyNickname !== undefined && { babyNickname }),
+      ...(assignedDoctor !== undefined && { assignedDoctor }),
+      ...(assignedCHW !== undefined && { assignedCHW }),
+    });
+    await mother.save();
+
+    res.status(200).json(mother);
   } catch (err) {
     next(err);
   }
@@ -77,7 +143,7 @@ export async function getGuidance(req: AuthRequest, res: Response, next: NextFun
     // Logic for pregnancy vs postpartum
     let stage = 'Pregnancy';
     let weekOrMonth = mother.pregnancyWeeks || 0;
-    let message = 'Welcome to MamaCare+ 💛. Remember to eat a balanced diet and attend your ANC visits.';
+    let message = 'Welcome to MamaCare+. Remember to eat a balanced diet and attend your ANC visits.';
 
     if (children.length > 0) {
       // Get youngest child
@@ -90,23 +156,28 @@ export async function getGuidance(req: AuthRequest, res: Response, next: NextFun
       
       stage = 'Postpartum';
       weekOrMonth = ageMonths;
-      message = `Your baby "${youngest.name || 'Little Star'}" is ${ageMonths} months old. 🛡️ Ensure they stars on track with their vaccination schedule.`;
+      message = `Your baby "${youngest.name || 'Little Star'}" is ${ageMonths} months old. Ensure they stay on track with their vaccination schedule.`;
     } else if (mother.pregnancyWeeks) {
       const weeks = mother.pregnancyWeeks;
       if (weeks < 13) {
-        message = `You are in your first trimester (Week ${weeks}). 🥗 Ensure you are taking your folic acid daily.`;
+        message = `You are in your first trimester (Week ${weeks}). Ensure you are taking your folic acid daily.`;
       } else if (weeks < 27) {
-        message = `You are in your second trimester (Week ${weeks}). 👶 You might start feeling the baby kick!`;
+        message = `You are in your second trimester (Week ${weeks}). You might start feeling the baby kick.`;
       } else {
-        message = `You are in your third trimester (Week ${weeks}). 🏥 Time to finalize your birth plan and hospital bag.`;
+        message = `You are in your third trimester (Week ${weeks}). Time to finalize your birth plan and hospital bag.`;
       }
     }
+
+    const nextAppointment = await Appointment.findOne({
+      mother: mother._id,
+      status: 'scheduled',
+    }).sort({ scheduledFor: 1 }).select('type scheduledFor notes');
 
     res.status(200).json({
       stage,
       weekOrMonth,
       friendlyMessage: message,
-      nextAppointment: 'Coming soon', // Placeholder for next appointment logic
+      nextAppointment,
     });
   } catch (err) {
     next(err);

@@ -9,7 +9,13 @@ export async function getMyMothers(req: AuthRequest, res: Response, next: NextFu
     const doctorId = req.user?.id;
     if (!doctorId) throw new ApiError('Unauthorized', 401);
 
-    const mothers = await Mother.find({ assignedDoctor: doctorId, status: 'active' });
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const mothers = await Mother.find({ assignedDoctor: doctorId, status: 'active' })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(mothers);
   } catch (err) {
     next(err);
@@ -21,6 +27,10 @@ export async function getMyAppointments(req: AuthRequest, res: Response, next: N
     const doctorId = req.user?.id;
     if (!doctorId) throw new ApiError('Unauthorized', 401);
 
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
     // Find all mothers assigned to this doctor
     const myMothers = await Mother.find({ assignedDoctor: doctorId }).select('_id');
     const motherIds = myMothers.map(m => m._id);
@@ -28,7 +38,11 @@ export async function getMyAppointments(req: AuthRequest, res: Response, next: N
     const appointments = await Appointment.find({
       mother: { $in: motherIds },
       status: 'scheduled'
-    }).populate('mother', 'firstName lastName phone').sort({ scheduledFor: 1 });
+    })
+      .populate('mother', 'firstName lastName phone')
+      .sort({ scheduledFor: 1 })
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json(appointments);
   } catch (err) {

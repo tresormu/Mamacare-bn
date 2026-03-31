@@ -59,6 +59,33 @@ describe('Doctors Controller', () => {
     });
   });
 
+  describe('GET /api/doctors/my-appointments', () => {
+    it('should list upcoming appointments for the doctor\'s patients', async () => {
+      const mother = await Mother.create({
+        firstName: 'Patient',
+        lastName: 'One',
+        phone: '9',
+        assignedDoctor: doctorId,
+      });
+
+      const { Appointment } = await import('../models/Appointment');
+      await Appointment.create({
+        mother: mother._id,
+        type: 'ANC',
+        scheduledFor: new Date(Date.now() + 86400000),
+        status: 'scheduled',
+      });
+
+      const res = await request(app)
+        .get('/api/doctors/my-appointments')
+        .set('Authorization', `Bearer ${doctorToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('GET /api/doctors/summary', () => {
     it('should return stats for the doctor\'s own cohort', async () => {
       await Mother.create({

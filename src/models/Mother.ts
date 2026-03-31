@@ -4,6 +4,8 @@ export interface IMother extends Document {
   firstName: string;
   lastName: string;
   phone: string;
+  email?: string;
+  user?: Types.ObjectId;
   dateOfBirth?: Date;
   registrationDate: Date;
   pregnancyWeeks?: number;
@@ -24,7 +26,9 @@ const MotherSchema = new Schema<IMother>(
   {
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true, unique: true },
+    email: { type: String, trim: true, lowercase: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
     dateOfBirth: { type: Date },
     registrationDate: { type: Date, default: Date.now },
     pregnancyWeeks: { type: Number, min: 0 },
@@ -60,6 +64,11 @@ const MotherSchema = new Schema<IMother>(
  *           type: string
  *         phone:
  *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         user:
+ *           type: string
  *         dateOfBirth:
  *           type: string
  *           format: date
@@ -89,7 +98,7 @@ const MotherSchema = new Schema<IMother>(
  *           type: string
  */
 
-MotherSchema.index({ phone: 1 });
+MotherSchema.index({ phone: 1 }, { unique: true });
 MotherSchema.index({ assignedDoctor: 1 });
 MotherSchema.index({ assignedCHW: 1 });
 

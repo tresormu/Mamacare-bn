@@ -36,7 +36,7 @@ export async function updateAppointmentStatus(req: AuthRequest, res: Response, n
 
     let followUpTriggered = false;
 
-    if (previousStatus !== 'missed' && nextStatus === 'missed') {
+    if (previousStatus === 'scheduled' && nextStatus === 'missed') {
       const mother = await Mother.findById(appointment.mother);
       if (mother) {
         mother.missedAppointmentsCount += 1;
@@ -56,6 +56,28 @@ export async function updateAppointmentStatus(req: AuthRequest, res: Response, n
     }
 
     res.status(200).json({ appointment, followUpTriggered });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getMotherAppointments(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const motherId = req.params.id;
+    const status = req.query.status as AppointmentStatus | undefined;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, any> = { mother: motherId };
+    if (status) filter.status = status;
+
+    const appointments = await Appointment.find(filter)
+      .sort({ scheduledFor: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json(appointments);
   } catch (err) {
     next(err);
   }

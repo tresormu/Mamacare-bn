@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { jwtSecret } from '../config/env';
 import { User, UserRole } from '../models/User';
 import { ApiError } from '../middleware/error';
-import { TokenType } from '../middleware/auth';
+import { AuthRequest, TokenType } from '../middleware/auth';
 
 const TTL: Record<TokenType, number> = {
   mother: 60 * 60 * 24 * 30,
@@ -24,12 +24,12 @@ function tokenTypeForRole(role: UserRole): TokenType {
 
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) throw new ApiError('Email already registered', 409);
 
-    const user = await User.create({ name, email, password, role });
+    const user = await User.create({ name, email, password });
     const token = signToken(user._id.toString(), user.role, tokenTypeForRole(user.role));
     res.status(201).json({
       user: { id: user._id, name: user.name, email: user.email, role: user.role },
@@ -61,12 +61,33 @@ export async function login(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export async function me(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) throw new ApiError('Unauthorized', 401);
+
+    const user = await User.findById(userId).select('-password');
+    if (!user) throw new ApiError('User not found', 404);
+
+    res.status(200).json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+const passwordSchema = z
+  .string()
+  .min(8)
+  .regex(/[a-z]/, 'Password must include a lowercase letter')
+  .regex(/[A-Z]/, 'Password must include an uppercase letter')
+  .regex(/[0-9]/, 'Password must include a number')
+  .regex(/[^A-Za-z0-9]/, 'Password must include a special character');
+
 export const registerSchema = z.object({
   body: z.object({
     name: z.string().min(1),
     email: z.string().email(),
-    password: z.string().min(6),
-    role: z.enum(['admin', 'doctor', 'chw']).optional(),
+    password: passwordSchema,
   }),
 });
 

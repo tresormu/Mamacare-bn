@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import mothersRoutes from './routes/mothersRoutes';
@@ -14,17 +13,11 @@ import healthRoutes from './routes/healthRoutes';
 import followUpsRoutes from './routes/followUpsRoutes';
 import adminRoutes from './routes/adminRoutes';
 import doctorsRoutes from './routes/doctorsRoutes';
+import paymentRoutes from './routes/paymentRoutes';
+import aiRoutes from './routes/aiRoutes';
 import { notFound, errorHandler } from './middleware/error';
 import { requireAuth } from './middleware/auth';
 import { env, allowedOrigins } from './config/env';
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { error: 'Too many requests, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 export function createApp() {
   const app = express();
@@ -37,7 +30,7 @@ export function createApp() {
   app.get('/health', (_req, res) => res.json({ ok: true }));
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/auth', authLimiter, authRoutes);
+  app.use('/api/auth', authRoutes);
 
   app.use('/api/mothers', requireAuth, mothersRoutes);
   app.use('/api/appointments', requireAuth, appointmentsRoutes);
@@ -47,6 +40,8 @@ export function createApp() {
   app.use('/api/follow-ups', requireAuth, followUpsRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/doctors', doctorsRoutes);
+  app.use('/api/payment', paymentRoutes);
+  app.use('/api/ai', aiRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

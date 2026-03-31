@@ -53,5 +53,6 @@ const AppointmentSchema = new Schema<IAppointment>(
  */
 
 AppointmentSchema.index({ mother: 1, scheduledFor: 1 });
+AppointmentSchema.index({ status: 1 });
 
 export const Appointment = mongoose.model<IAppointment>('Appointment', AppointmentSchema);

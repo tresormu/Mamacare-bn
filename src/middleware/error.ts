@@ -15,6 +15,9 @@ export function notFound(_req: Request, _res: Response, next: NextFunction) {
 
 export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const message = statusCode === 500 && isProduction
+    ? 'Internal Server Error'
+    : err.message || 'Internal Server Error';
   res.status(statusCode).json({ error: message });
 }

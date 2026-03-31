@@ -1,8 +1,18 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validate';
-import { login, loginSchema, register, registerSchema } from '../controllers/authController';
+import { login, loginSchema, me, register, registerSchema } from '../controllers/authController';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * @openapi
@@ -15,14 +25,19 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/User'
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name: { type: string }
+ *               email: { type: string, format: email }
+ *               password: { type: string }
  *     responses:
  *       201:
  *         description: User registered successfully
  *       409:
  *         description: Email already registered
  */
-router.post('/register', validate(registerSchema), register);
+router.post('/register', authLimiter, validate(registerSchema), register);
 
 /**
  * @openapi
@@ -46,7 +61,23 @@ router.post('/register', validate(registerSchema), register);
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', validate(loginSchema), login);
+router.post('/login', authLimiter, validate(loginSchema), login);
+
+/**
+ * @openapi
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user profile
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/me', requireAuth, me);
 
 export default router;
 

@@ -7,7 +7,29 @@ import { AuthRequest } from '../middleware/auth';
 
 export async function getOpenFollowUps(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const followUps = await FollowUp.find({ status: 'open' }).populate('mother');
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    let filter: Record<string, any> = { status: 'open' };
+
+    if (req.user?.role === 'chw') {
+      const chwId = req.user.id;
+      const motherIds = await Mother.find({ assignedCHW: chwId }).select('_id');
+      filter = {
+        status: 'open',
+        $or: [
+          { assignedTo: chwId },
+          { mother: { $in: motherIds.map((m) => m._id) } },
+        ],
+      };
+    }
+
+    const followUps = await FollowUp.find(filter)
+      .populate('mother')
+      .sort({ triggeredAt: -1 })
+      .skip(skip)
+      .limit(limit);
     res.status(200).json(followUps);
   } catch (err) {
     next(err);

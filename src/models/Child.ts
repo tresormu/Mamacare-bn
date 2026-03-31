@@ -5,6 +5,9 @@ export interface IChild extends Document {
   name?: string;
   dateOfBirth: Date;
   sex?: 'female' | 'male';
+  weightKg?: number;
+  lastWeightAt?: Date;
+  vaccinations?: { vaccine: string; date?: Date; status?: 'scheduled' | 'given' | 'missed' }[];
   archivedAt?: Date;
 }
 
@@ -14,6 +17,18 @@ const ChildSchema = new Schema<IChild>(
     name: { type: String, trim: true },
     dateOfBirth: { type: Date, required: true },
     sex: { type: String, enum: ['female', 'male'] },
+    weightKg: { type: Number, min: 0 },
+    lastWeightAt: { type: Date },
+    vaccinations: {
+      type: [
+        {
+          vaccine: { type: String, required: true },
+          date: { type: Date },
+          status: { type: String, enum: ['scheduled', 'given', 'missed'], default: 'scheduled' },
+        },
+      ],
+      default: [],
+    },
     archivedAt: { type: Date },
   },
   { timestamps: true }
@@ -40,6 +55,24 @@ const ChildSchema = new Schema<IChild>(
  *         sex:
  *           type: string
  *           enum: [female, male]
+ *         weightKg:
+ *           type: number
+ *         lastWeightAt:
+ *           type: string
+ *           format: date-time
+ *         vaccinations:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               vaccine:
+ *                 type: string
+ *               date:
+ *                 type: string
+ *                 format: date-time
+ *               status:
+ *                 type: string
+ *                 enum: [scheduled, given, missed]
  */
 
 ChildSchema.index({ mother: 1 });

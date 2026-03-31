@@ -16,7 +16,7 @@ describe('FollowUps Controller', () => {
     const chw = await User.create({
       name: 'CHW Agent',
       email: 'chw@example.com',
-      password: 'password123',
+      password: 'Password123!',
       role: 'chw',
     });
     chwToken = jwt.sign({ id: chw._id, role: 'chw', tokenType: 'chw' }, jwtSecret);
@@ -26,6 +26,7 @@ describe('FollowUps Controller', () => {
       lastName: 'Doe',
       phone: '0780000000',
       missedAppointmentsCount: 4,
+      assignedCHW: chw._id,
     });
     motherId = mother._id.toString();
   });

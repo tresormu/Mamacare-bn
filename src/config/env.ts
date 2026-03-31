@@ -1,7 +1,15 @@
 ﻿import dotenv from 'dotenv';
 dotenv.config();
 
-const required = ['MONGODB_URI', 'JWT_SECRET', 'ALLOWED_ORIGINS'] as const;
+const required = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'ALLOWED_ORIGINS',
+  'FLW_SECRET_KEY',
+  'FLW_SECRET_HASH',
+  'FLW_REDIRECT_URL',
+  'MAMACARE_AI_KEY',
+] as const;
 for (const key of required) {
   if (!process.env[key]) {
     throw new Error(`Missing required env var: ${key}`);

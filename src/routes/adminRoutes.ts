@@ -61,7 +61,7 @@ router.get('/users/:id', requireAuth, requireRole('admin'), adminController.getU
  *             properties:
  *               name: { type: string }
  *               email: { type: string }
- *               role: { type: string, enum: [admin, doctor, chw] }
+ *               role: { type: string, enum: [doctor, chw] }
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -103,4 +103,3 @@ router.delete('/users/:id', requireAuth, requireRole('admin'), adminController.d
 router.get('/summary', requireAuth, requireRole('admin'), adminController.getSystemSummary);
 
 export default router;
-

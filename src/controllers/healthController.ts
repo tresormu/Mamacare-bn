@@ -52,29 +52,35 @@ const MONITOR_SIGNS = [...MOTHER_MONITOR_SIGNS];
 
 export async function assessSymptoms(req: Request, res: Response, next: NextFunction) {
   try {
-    const { symptoms } = req.body as { symptoms: string[] };
+    const { symptoms, patientType } = req.body as {
+      symptoms: string[];
+      patientType?: 'mother' | 'infant';
+    };
 
     if (!symptoms || !Array.isArray(symptoms)) {
       return res.status(400).json({ error: 'Symptoms must be provided as an array of strings' });
     }
 
     const normalizedSymptoms = symptoms.map(s => s.toLowerCase());
+    const isInfant = patientType === 'infant';
+    const dangerSet = isInfant ? INFANT_DANGER_SIGNS : MOTHER_DANGER_SIGNS;
+    const monitorSet = isInfant ? INFANT_MONITOR_SIGNS : MOTHER_MONITOR_SIGNS;
 
     let riskLevel: RiskLevel = 'NORMAL';
     let guidance = 'These symptoms are common during pregnancy. Continue with your scheduled appointments and stay hydrated.';
     let isEmergency = false;
 
     // Triage Logic
-    const hasEmergency = normalizedSymptoms.some(s => DANGER_SIGNS.includes(s));
-    const hasMonitor = normalizedSymptoms.some(s => MONITOR_SIGNS.includes(s));
+    const hasEmergency = normalizedSymptoms.some(s => dangerSet.has(s));
+    const hasMonitor = normalizedSymptoms.some(s => monitorSet.has(s));
 
     if (hasEmergency) {
       riskLevel = 'EMERGENCY';
-      guidance = '🚨 URGENT: These are danger signs. Please proceed to the nearest health facility immediately.';
+      guidance = 'URGENT: These are danger signs. Please go to the nearest hospital immediately.';
       isEmergency = true;
     } else if (hasMonitor) {
       riskLevel = 'MONITOR';
-      guidance = '⚠ PLEASE MONITOR: These symptoms require closer attention. Contact your healthcare provider or CHW if they persist or worsen.';
+      guidance = 'PLEASE MONITOR: These symptoms require closer attention. Contact your healthcare provider or CHW if they persist or worsen.';
     }
 
     const assessment: SymptomAssessment = {
