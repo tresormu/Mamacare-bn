@@ -27,7 +27,12 @@ export function createApp() {
   app.use(helmet());
   
   const corsOptions = {
-    origin: allowedOrigins,
+    origin: [
+      "http://localhost:5173",
+      "https://hackthon-web-kappa.vercel.app",
+      "https://mamacare-bn.onrender.com",
+      "https://hackthon-web-phi.vercel.app",
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
