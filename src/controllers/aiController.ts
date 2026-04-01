@@ -6,7 +6,7 @@ import { Mother } from '../models/Mother';
 import { Child } from '../models/Child';
 import { getGroqClient, buildSystemPrompt } from '../utils/groq';
 
-const MODEL = 'llama3-8b-8192';
+const MODEL = 'llama-3.3-70b-versatile';
 const MAX_TOKENS = 1024;
 
 export async function chat(req: AuthRequest, res: Response, next: NextFunction) {
