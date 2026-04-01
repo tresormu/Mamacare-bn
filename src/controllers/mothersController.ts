@@ -1,5 +1,4 @@
 import { Response, NextFunction } from 'express';
-import bcrypt from 'bcryptjs';
 import { Mother } from '../models/Mother';
 import { Child } from '../models/Child';
 import { Appointment } from '../models/Appointment';
@@ -29,7 +28,6 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
     } = req.body;
 
     const plainPin = generatePin();
-    const hashedPin = await bcrypt.hash(plainPin, 10);
 
     const doctorId = assignedDoctor || req.user?.id;
 
@@ -43,7 +41,7 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
       babyNickname, assignedCHW,
       assignedDoctor: doctorId,
       hasChildUnderTwo: hasChildUnderTwo ?? (Array.isArray(existingChildren) && existingChildren.length > 0),
-      pinCode: hashedPin,
+      pinCode: plainPin,
       isActive: false,
       hospital,
     });

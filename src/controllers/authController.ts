@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { jwtSecret } from '../config/env';
 import { User, UserRole } from '../models/User';
 import { Mother } from '../models/Mother';
+import { DoctorAlert } from '../models/DoctorAlert';
 import { ApiError } from '../middleware/error';
 import { AuthRequest, TokenType } from '../middleware/auth';
 
@@ -27,19 +28,34 @@ function generateResetCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-async function findMotherByPinCode(pinCode: string) {
-  const mothers = await Mother.find({ isActive: false }).select('+pinCode +password');
+type PatientActivationMother = {
+  _id: unknown;
+  firstName: string;
+  lastName: string;
+  phone: string;
+};
 
-  for (const mother of mothers) {
-    if (mother.pinCode && (await mother.comparePin(pinCode))) {
-      return mother;
-    }
+async function findMotherForActivation(phone: string, pinCode: string) {
+  const mother = await Mother.findOne({ phone, isActive: false }).select('+pinCode +password');
+
+  if (!mother) {
+    return null;
   }
 
-  return null;
+  if (mother.pinCode && (await mother.comparePin(pinCode))) {
+    return mother;
+  }
+
+  const matchingAlert = await DoctorAlert.findOne({
+    mother: mother._id,
+    motherPhone: phone,
+    pinCode,
+  }).sort({ createdAt: -1 });
+
+  return matchingAlert ? mother : null;
 }
 
-function buildPatientActivationPayload(mother: Awaited<ReturnType<typeof findMotherByPinCode>>) {
+function buildPatientActivationPayload(mother: PatientActivationMother | null) {
   if (!mother) {
     return null;
   }
@@ -207,10 +223,10 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
 
 export async function verifyPatientCode(req: Request, res: Response, next: NextFunction) {
   try {
-    const { pinCode } = req.body;
-    const mother = await findMotherByPinCode(pinCode);
+    const { phone, pinCode } = req.body;
+    const mother = await findMotherForActivation(phone, pinCode);
 
-    if (!mother) throw new ApiError('Invalid access code. Please check the code shared by your clinic.', 404);
+    if (!mother) throw new ApiError('That phone number and access code do not match our records. Please check both and try again.', 404);
 
     res.status(200).json({
       message: 'Access code verified',
@@ -224,16 +240,9 @@ export async function verifyPatientCode(req: Request, res: Response, next: NextF
 export async function activatePatient(req: Request, res: Response, next: NextFunction) {
   try {
     const { phone, pinCode, password } = req.body;
-
-    const mother = phone
-      ? await Mother.findOne({ phone, isActive: false }).select('+pinCode +password')
-      : await findMotherByPinCode(pinCode);
-    if (!mother) throw new ApiError('Invalid access code', 401);
+    const mother = await findMotherForActivation(phone, pinCode);
+    if (!mother) throw new ApiError('That phone number and access code do not match our records.', 401);
     if (mother.isActive) throw new ApiError('Account already activated', 409);
-    if (phone) {
-      const pinOk = await mother.comparePin(pinCode);
-      if (!pinOk) throw new ApiError('Invalid access code', 401);
-    }
 
     mother.password = password;
     mother.isActive = true;
@@ -281,7 +290,7 @@ export const loginSchema = z.object({
 
 export const activatePatientSchema = z.object({
   body: z.object({
-    phone: z.string().min(5).optional(),
+    phone: z.string().min(5),
     pinCode: z.string().length(6),
     password: passwordSchema,
   }),
@@ -289,6 +298,7 @@ export const activatePatientSchema = z.object({
 
 export const verifyPatientCodeSchema = z.object({
   body: z.object({
+    phone: z.string().min(5),
     pinCode: z.string().length(6),
   }),
 });
