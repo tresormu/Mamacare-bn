@@ -35,8 +35,27 @@ type PatientActivationMother = {
   phone: string;
 };
 
+function normalizePhoneNumber(input: string) {
+  const digits = input.replace(/\D/g, '');
+
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.startsWith('250') && digits.length === 12) {
+    return `0${digits.slice(3)}`;
+  }
+
+  if (digits.startsWith('7') && digits.length === 9) {
+    return `0${digits}`;
+  }
+
+  return digits;
+}
+
 async function findMotherForActivation(phone: string, pinCode: string) {
-  const mother = await Mother.findOne({ phone, isActive: false }).select('+pinCode +password');
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const mother = await Mother.findOne({ phone: normalizedPhone, isActive: false }).select('+pinCode +password');
 
   if (!mother) {
     return null;
@@ -46,9 +65,9 @@ async function findMotherForActivation(phone: string, pinCode: string) {
     return mother;
   }
 
-  const matchingAlert = await DoctorAlert.findOne({
+    const matchingAlert = await DoctorAlert.findOne({
     mother: mother._id,
-    motherPhone: phone,
+    motherPhone: normalizedPhone,
     pinCode,
   }).sort({ createdAt: -1 });
 

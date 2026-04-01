@@ -19,6 +19,24 @@ function generatePin(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+function normalizePhoneNumber(input: string) {
+  const digits = input.replace(/\D/g, '');
+
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.startsWith('250') && digits.length === 12) {
+    return `0${digits.slice(3)}`;
+  }
+
+  if (digits.startsWith('7') && digits.length === 9) {
+    return `0${digits}`;
+  }
+
+  return digits;
+}
+
 export async function createMother(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const {
@@ -26,6 +44,7 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
       babyNickname, assignedDoctor, assignedCHW, hasChildUnderTwo, existingChildren,
     } = req.body;
+    const normalizedPhone = normalizePhoneNumber(phone);
 
     const plainPin = generatePin();
 
@@ -36,7 +55,7 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
     const hospital = registrar?.hospitalName;
 
     const mother = await Mother.create({
-      firstName, lastName, phone, dateOfBirth, pregnancyWeeks, parity,
+      firstName, lastName, phone: normalizedPhone, dateOfBirth, pregnancyWeeks, parity,
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
       babyNickname, assignedCHW,
       assignedDoctor: doctorId,
@@ -58,7 +77,7 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
         doctor: doctorId,
         mother: mother._id,
         motherName: `${firstName} ${lastName}`,
-        motherPhone: phone,
+        motherPhone: normalizedPhone,
         pinCode: plainPin,
       });
 
@@ -66,7 +85,7 @@ export async function createMother(req: AuthRequest, res: Response, next: NextFu
         alertId: alert._id,
         motherId: mother._id,
         motherName: `${firstName} ${lastName}`,
-        motherPhone: phone,
+        motherPhone: normalizedPhone,
         pinCode: plainPin,
         createdAt: alert.createdAt,
       };
@@ -158,10 +177,11 @@ export async function updateMother(req: AuthRequest, res: Response, next: NextFu
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
       babyNickname, assignedDoctor, assignedCHW,
     } = req.body;
+    const nextPhone = phone !== undefined ? normalizePhoneNumber(phone) : undefined;
     const allowedUpdates =
       req.user?.role === 'mother'
         ? {
-            ...(phone !== undefined && { phone }),
+            ...(nextPhone !== undefined && { phone: nextPhone }),
             ...(preferredLanguage !== undefined && { preferredLanguage }),
             ...(notificationChannel !== undefined && { notificationChannel }),
             ...(appOptIn !== undefined && { appOptIn }),
@@ -170,7 +190,7 @@ export async function updateMother(req: AuthRequest, res: Response, next: NextFu
         : {
             ...(firstName !== undefined && { firstName }),
             ...(lastName !== undefined && { lastName }),
-            ...(phone !== undefined && { phone }),
+            ...(nextPhone !== undefined && { phone: nextPhone }),
             ...(dateOfBirth !== undefined && { dateOfBirth }),
             ...(pregnancyWeeks !== undefined && { pregnancyWeeks }),
             ...(parity !== undefined && { parity }),
