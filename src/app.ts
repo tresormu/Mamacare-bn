@@ -25,18 +25,22 @@ export function createApp() {
   const app = express();
 
   app.use(helmet());
-  app.use(cors({
-    origin: [],
+  const corsOrigins = [
+    'http://localhost:5173',
+    'https://hackthon-web-kappa.vercel.app',
+    'https://mamacare-bn.onrender.com',
+    'https://hackthon-web-phi.vercel.app',
+  ];
+
+  const corsOptions = {
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-  }));
-  app.options('*', cors({
-    origin: allowedOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }));
+  };
+
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
   app.use(express.json({ limit: '10kb' }));
   app.use(morgan(env === 'production' ? 'combined' : 'dev'));
 
