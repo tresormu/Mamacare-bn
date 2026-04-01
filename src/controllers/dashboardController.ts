@@ -49,6 +49,19 @@ export async function dismissPinAlert(req: AuthRequest, res: Response, next: Nex
 
 export async function getDashboardSummary(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    if (req.user?.role === 'mother') {
+      const mother = await Mother.findById(req.user.id).select('_id missedAppointmentsCount');
+      if (!mother) throw new ApiError('Mother not found', 404);
+
+      const openFollowUps = await FollowUp.countDocuments({ mother: mother._id, status: 'open' });
+
+      return res.json({
+        activeMothers: 1,
+        missedAppointments: mother.missedAppointmentsCount,
+        openFollowUps,
+      });
+    }
+
     const doctorId = req.user?.id;
     const myMothers = await Mother.find({ assignedDoctor: doctorId, status: 'active' }).select('_id');
     const motherIds = myMothers.map(m => m._id);

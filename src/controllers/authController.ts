@@ -27,6 +27,31 @@ function generateResetCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+async function findMotherByPinCode(pinCode: string) {
+  const mothers = await Mother.find({ isActive: false }).select('+pinCode +password');
+
+  for (const mother of mothers) {
+    if (mother.pinCode && (await mother.comparePin(pinCode))) {
+      return mother;
+    }
+  }
+
+  return null;
+}
+
+function buildPatientActivationPayload(mother: Awaited<ReturnType<typeof findMotherByPinCode>>) {
+  if (!mother) {
+    return null;
+  }
+
+  return {
+    id: mother._id,
+    firstName: mother.firstName,
+    lastName: mother.lastName,
+    phone: mother.phone,
+  };
+}
+
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
     const { name, email, password, hospitalName } = req.body;
@@ -180,16 +205,35 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
   }
 }
 
+export async function verifyPatientCode(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { pinCode } = req.body;
+    const mother = await findMotherByPinCode(pinCode);
+
+    if (!mother) throw new ApiError('Invalid access code. Please check the code shared by your clinic.', 404);
+
+    res.status(200).json({
+      message: 'Access code verified',
+      patient: buildPatientActivationPayload(mother),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function activatePatient(req: Request, res: Response, next: NextFunction) {
   try {
     const { phone, pinCode, password } = req.body;
 
-    const mother = await Mother.findOne({ phone }).select('+pinCode +password');
-    if (!mother) throw new ApiError('Invalid phone or PIN', 401);
+    const mother = phone
+      ? await Mother.findOne({ phone, isActive: false }).select('+pinCode +password')
+      : await findMotherByPinCode(pinCode);
+    if (!mother) throw new ApiError('Invalid access code', 401);
     if (mother.isActive) throw new ApiError('Account already activated', 409);
-
-    const pinOk = await mother.comparePin(pinCode);
-    if (!pinOk) throw new ApiError('Invalid phone or PIN', 401);
+    if (phone) {
+      const pinOk = await mother.comparePin(pinCode);
+      if (!pinOk) throw new ApiError('Invalid access code', 401);
+    }
 
     mother.password = password;
     mother.isActive = true;
@@ -204,7 +248,7 @@ export async function activatePatient(req: Request, res: Response, next: NextFun
     res.status(200).json({
       message: 'Account activated successfully',
       token,
-      patient: { id: mother._id, firstName: mother.firstName, lastName: mother.lastName, phone: mother.phone },
+      patient: buildPatientActivationPayload(mother),
     });
   } catch (err) {
     next(err);
@@ -237,9 +281,15 @@ export const loginSchema = z.object({
 
 export const activatePatientSchema = z.object({
   body: z.object({
-    phone: z.string().min(5),
+    phone: z.string().min(5).optional(),
     pinCode: z.string().length(6),
     password: passwordSchema,
+  }),
+});
+
+export const verifyPatientCodeSchema = z.object({
+  body: z.object({
+    pinCode: z.string().length(6),
   }),
 });
 

@@ -93,6 +93,10 @@ export async function registerChild(req: AuthRequest, res: Response, next: NextF
 
 export async function getMotherChildren(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    if (req.user?.role === 'mother' && req.user.id !== req.params.motherId) {
+      throw new ApiError('Forbidden', 403);
+    }
+
     const children = await Child.find({ mother: req.params.motherId });
     res.status(200).json(children);
   } catch (err) {
@@ -104,6 +108,9 @@ export async function updateChildGrowth(req: AuthRequest, res: Response, next: N
   try {
     const child = await Child.findById(req.params.id);
     if (!child) throw new ApiError('Child not found', 404);
+    if (req.user?.role === 'mother' && child.mother.toString() !== req.user.id) {
+      throw new ApiError('Forbidden', 403);
+    }
 
     const { weightKg, lastWeightAt } = req.body;
     child.weightKg = weightKg;
@@ -120,6 +127,9 @@ export async function saveChildVaccination(req: AuthRequest, res: Response, next
   try {
     const child = await Child.findById(req.params.id);
     if (!child) throw new ApiError('Child not found', 404);
+    if (req.user?.role === 'mother' && child.mother.toString() !== req.user.id) {
+      throw new ApiError('Forbidden', 403);
+    }
 
     const { vaccine, date, status = 'given' } = req.body;
     const vaccinationDate = date ? new Date(date) : new Date();
@@ -163,6 +173,9 @@ export async function addChildGuidanceNote(req: AuthRequest, res: Response, next
   try {
     const child = await Child.findById(req.params.id);
     if (!child) throw new ApiError('Child not found', 404);
+    if (req.user?.role === 'mother' && child.mother.toString() !== req.user.id) {
+      throw new ApiError('Forbidden', 403);
+    }
 
     const { topic, note } = req.body;
     child.caregiverGuidanceNotes = [

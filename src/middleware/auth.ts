@@ -2,11 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { jwtSecret } from '../config/env';
 import { User, UserRole } from '../models/User';
+import { Mother } from '../models/Mother';
 
 export type TokenType = 'mother' | 'doctor' | 'admin';
+export type AppRole = UserRole | 'mother';
 
 export interface AuthRequest extends Request {
-  user?: { id: string; role: UserRole; tokenType: TokenType };
+  user?: { id: string; role: AppRole; tokenType: TokenType };
 }
 
 export async function requireAuth(req: AuthRequest, _res: Response, next: NextFunction) {
@@ -21,7 +23,15 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
     }
 
     const token = raw;
-    const payload = jwt.verify(token, jwtSecret) as { id: string; role: UserRole; tokenType: TokenType };
+    const payload = jwt.verify(token, jwtSecret) as { id: string; role: AppRole; tokenType: TokenType };
+
+    if (payload.tokenType === 'mother') {
+      const mother = await Mother.findById(payload.id).select('_id');
+      if (!mother) return next(Object.assign(new Error('Invalid token user'), { statusCode: 401 }));
+
+      req.user = { id: mother._id.toString(), role: 'mother', tokenType: 'mother' };
+      return next();
+    }
 
     const user = await User.findById(payload.id);
     if (!user) return next(Object.assign(new Error('Invalid token user'), { statusCode: 401 }));
@@ -33,7 +43,7 @@ export async function requireAuth(req: AuthRequest, _res: Response, next: NextFu
   }
 }
 
-export function requireRole(...roles: UserRole[]) {
+export function requireRole(...roles: AppRole[]) {
   return (req: AuthRequest, _res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return next(Object.assign(new Error('Forbidden'), { statusCode: 403 }));

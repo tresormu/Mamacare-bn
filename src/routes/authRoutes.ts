@@ -14,6 +14,8 @@ import {
   registerSchema,
   resetPassword,
   resetPasswordSchema,
+  verifyPatientCode,
+  verifyPatientCodeSchema,
   updateProfile,
 } from '../controllers/authController';
 import { requireAuth } from '../middleware/auth';
@@ -122,6 +124,7 @@ router.post('/logout', requireAuth, logout);
  *         description: Profile updated
  */
 router.patch('/profile', requireAuth, updateProfile);
+router.post('/patient/verify-code', authLimiter, validate(verifyPatientCodeSchema), verifyPatientCode);
 router.post('/patient/activate', authLimiter, validate(activatePatientSchema), activatePatient);
 
 export default router;

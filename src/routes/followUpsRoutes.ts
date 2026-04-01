@@ -16,7 +16,7 @@ const router = Router();
  *       200:
  *         description: List of open follow-ups
  */
-router.get('/', requireAuth, requireRole('admin', 'doctor', 'chw'), followUpsController.getOpenFollowUps);
+router.get('/', requireAuth, followUpsController.getOpenFollowUps);
 
 /**
  * @openapi
@@ -49,4 +49,3 @@ router.get('/', requireAuth, requireRole('admin', 'doctor', 'chw'), followUpsCon
 router.post('/:id/resolve', requireAuth, requireRole('admin', 'chw'), followUpsController.resolveFollowUp);
 
 export default router;
-

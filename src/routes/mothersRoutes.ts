@@ -143,7 +143,7 @@ router.get('/', requireAuth, requireRole('admin', 'doctor', 'chw'), listMothers)
  *       404:
  *         description: Mother not found
  */
-router.get('/:id', requireAuth, requireRole('admin', 'doctor', 'chw'), getMother);
+router.get('/:id', requireAuth, getMother);
 
 /**
  * @openapi
@@ -169,7 +169,7 @@ router.get('/:id', requireAuth, requireRole('admin', 'doctor', 'chw'), getMother
  *       200:
  *         description: Mother updated successfully
  */
-router.patch('/:id', requireAuth, requireRole('admin', 'doctor', 'chw'), validate(motherUpdateSchema), updateMother);
+router.patch('/:id', requireAuth, validate(motherUpdateSchema), updateMother);
 
 /**
  * @openapi
@@ -234,7 +234,7 @@ router.post('/:id/appointments', requireAuth, requireRole('admin', 'doctor'), va
  *       200:
  *         description: Appointment list
  */
-router.get('/:id/appointments', requireAuth, requireRole('admin', 'doctor', 'chw'), getMotherAppointments);
+router.get('/:id/appointments', requireAuth, getMotherAppointments);
 
 /**
  * @openapi
@@ -274,7 +274,6 @@ router.post('/:id/archive-if-eligible', requireAuth, requireRole('admin'), archi
  *       200:
  *         description: Guidance messages
  */
-router.get('/:id/guidance', requireAuth, requireRole('admin', 'doctor', 'chw'), getGuidance);
+router.get('/:id/guidance', requireAuth, getGuidance);
 
 export default router;
-

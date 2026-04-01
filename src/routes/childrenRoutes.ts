@@ -63,25 +63,22 @@ router.post('/register', requireAuth, requireRole('admin', 'doctor', 'chw'), chi
  *       200:
  *         description: List of children
  */
-router.get('/mother/:motherId', requireAuth, requireRole('admin', 'doctor', 'chw'), childrenController.getMotherChildren);
+router.get('/mother/:motherId', requireAuth, childrenController.getMotherChildren);
 router.patch(
   '/:id/growth',
   requireAuth,
-  requireRole('admin', 'doctor', 'chw'),
   validate(childrenController.childGrowthSchema),
   childrenController.updateChildGrowth
 );
 router.post(
   '/:id/vaccinations',
   requireAuth,
-  requireRole('admin', 'doctor', 'chw'),
   validate(childrenController.childVaccinationSchema),
   childrenController.saveChildVaccination
 );
 router.post(
   '/:id/guidance-notes',
   requireAuth,
-  requireRole('admin', 'doctor', 'chw'),
   validate(childrenController.childGuidanceNoteSchema),
   childrenController.addChildGuidanceNote
 );

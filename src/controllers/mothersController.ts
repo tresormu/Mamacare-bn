@@ -10,6 +10,12 @@ import { fireWebhook } from '../utils/webhook';
 import { ApiError } from '../middleware/error';
 import { AuthRequest } from '../middleware/auth';
 
+function ensureMotherAccess(req: AuthRequest, motherId: string) {
+  if (req.user?.role === 'mother' && req.user.id !== motherId) {
+    throw new ApiError('Forbidden', 403);
+  }
+}
+
 function generatePin(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -108,6 +114,8 @@ export async function listMothers(req: AuthRequest, res: Response, next: NextFun
 
 export async function getMother(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    ensureMotherAccess(req, req.params.id);
+
     const mother = await Mother.findById(req.params.id);
     if (!mother) throw new ApiError('Mother not found', 404);
 
@@ -142,6 +150,8 @@ export async function addChild(req: AuthRequest, res: Response, next: NextFuncti
 
 export async function updateMother(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    ensureMotherAccess(req, req.params.id);
+
     const mother = await Mother.findById(req.params.id);
     if (!mother) throw new ApiError('Mother not found', 404);
 
@@ -150,21 +160,32 @@ export async function updateMother(req: AuthRequest, res: Response, next: NextFu
       riskFlags, preferredLanguage, notificationChannel, appOptIn,
       babyNickname, assignedDoctor, assignedCHW,
     } = req.body;
-    Object.assign(mother, {
-      ...(firstName !== undefined && { firstName }),
-      ...(lastName !== undefined && { lastName }),
-      ...(phone !== undefined && { phone }),
-      ...(dateOfBirth !== undefined && { dateOfBirth }),
-      ...(pregnancyWeeks !== undefined && { pregnancyWeeks }),
-      ...(parity !== undefined && { parity }),
-      ...(riskFlags !== undefined && { riskFlags }),
-      ...(preferredLanguage !== undefined && { preferredLanguage }),
-      ...(notificationChannel !== undefined && { notificationChannel }),
-      ...(appOptIn !== undefined && { appOptIn }),
-      ...(babyNickname !== undefined && { babyNickname }),
-      ...(assignedDoctor !== undefined && { assignedDoctor }),
-      ...(assignedCHW !== undefined && { assignedCHW }),
-    });
+    const allowedUpdates =
+      req.user?.role === 'mother'
+        ? {
+            ...(phone !== undefined && { phone }),
+            ...(preferredLanguage !== undefined && { preferredLanguage }),
+            ...(notificationChannel !== undefined && { notificationChannel }),
+            ...(appOptIn !== undefined && { appOptIn }),
+            ...(babyNickname !== undefined && { babyNickname }),
+          }
+        : {
+            ...(firstName !== undefined && { firstName }),
+            ...(lastName !== undefined && { lastName }),
+            ...(phone !== undefined && { phone }),
+            ...(dateOfBirth !== undefined && { dateOfBirth }),
+            ...(pregnancyWeeks !== undefined && { pregnancyWeeks }),
+            ...(parity !== undefined && { parity }),
+            ...(riskFlags !== undefined && { riskFlags }),
+            ...(preferredLanguage !== undefined && { preferredLanguage }),
+            ...(notificationChannel !== undefined && { notificationChannel }),
+            ...(appOptIn !== undefined && { appOptIn }),
+            ...(babyNickname !== undefined && { babyNickname }),
+            ...(assignedDoctor !== undefined && { assignedDoctor }),
+            ...(assignedCHW !== undefined && { assignedCHW }),
+          };
+
+    Object.assign(mother, allowedUpdates);
     await mother.save();
 
     res.status(200).json(mother);
@@ -203,6 +224,8 @@ export async function archiveMotherIfEligible(req: AuthRequest, res: Response, n
 
 export async function getGuidance(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    ensureMotherAccess(req, req.params.id);
+
     const mother = await Mother.findById(req.params.id);
     if (!mother) throw new ApiError('Mother not found', 404);
 
@@ -251,4 +274,3 @@ export async function getGuidance(req: AuthRequest, res: Response, next: NextFun
     next(err);
   }
 }
-

@@ -64,6 +64,10 @@ export async function updateAppointmentStatus(req: AuthRequest, res: Response, n
 export async function getMotherAppointments(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const motherId = req.params.id;
+    if (req.user?.role === 'mother' && req.user.id !== motherId) {
+      throw new ApiError('Forbidden', 403);
+    }
+
     const status = req.query.status as AppointmentStatus | undefined;
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));

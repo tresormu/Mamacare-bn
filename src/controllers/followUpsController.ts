@@ -13,6 +13,13 @@ export async function getOpenFollowUps(req: AuthRequest, res: Response, next: Ne
 
     let filter: Record<string, any> = { status: 'open' };
 
+    if (req.user?.role === 'mother') {
+      filter = {
+        status: 'open',
+        mother: req.user.id,
+      };
+    }
+
     if (req.user?.role === 'chw') {
       const chwId = req.user.id;
       const motherIds = await Mother.find({ assignedCHW: chwId }).select('_id');

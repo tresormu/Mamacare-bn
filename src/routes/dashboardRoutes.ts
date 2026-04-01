@@ -16,7 +16,7 @@ const router = Router();
  *       200:
  *         description: Dashboard summary statistics
  */
-router.get('/summary', requireAuth, requireRole('admin', 'doctor'), getDashboardSummary);
+router.get('/summary', requireAuth, getDashboardSummary);
 
 /**
  * @openapi
@@ -69,4 +69,3 @@ router.patch('/alerts/:id/dismiss', requireAuth, requireRole('admin', 'doctor', 
 router.get('/sse', requireAuth, requireRole('admin', 'doctor', 'chw'), subscribePinAlerts);
 
 export default router;
-
