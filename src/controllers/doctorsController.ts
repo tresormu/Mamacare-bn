@@ -14,10 +14,7 @@ export async function getMyMothers(req: AuthRequest, res: Response, next: NextFu
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const skip = (page - 1) * limit;
 
-    const doctor = await User.findById(doctorId).select('hospitalName');
-    const filter: Record<string, any> = { status: 'active' };
-    if (doctor?.hospitalName) filter.hospital = doctor.hospitalName;
-    else filter.assignedDoctor = doctorId; // fallback if no hospitalName set
+    const filter: Record<string, any> = { assignedDoctor: doctorId, status: 'active' };
 
     const [mothers, total] = await Promise.all([
       Mother.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -61,12 +58,9 @@ export async function getMyAppointments(req: AuthRequest, res: Response, next: N
 export async function getDoctorSummary(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const doctorId = req.user?.id;
-    if (!doctorId) throw new ApiError('Unauthorized', 401);
+    const filter: Record<string, any> = { assignedDoctor: doctorId };
 
-    const doctor = await User.findById(doctorId).select('hospitalName');
-    const hospitalFilter = doctor?.hospitalName ? { hospital: doctor.hospitalName } : { assignedDoctor: doctorId };
-
-    const myMothers = await Mother.find(hospitalFilter).select('_id riskFlags');
+    const myMothers = await Mother.find(filter).select('_id riskFlags');
     const motherIds = myMothers.map(m => m._id);
 
     const { FollowUp } = await import('../models/FollowUp');

@@ -49,11 +49,8 @@ export async function dismissPinAlert(req: AuthRequest, res: Response, next: Nex
 
 export async function getDashboardSummary(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { User } = await import('../models/User');
-    const doctor = await User.findById(req.user?.id).select('hospitalName');
-    const hospitalFilter = doctor?.hospitalName ? { hospital: doctor.hospitalName } : { assignedDoctor: req.user?.id };
-
-    const myMothers = await Mother.find({ ...hospitalFilter, status: 'active' }).select('_id');
+    const doctorId = req.user?.id;
+    const myMothers = await Mother.find({ assignedDoctor: doctorId, status: 'active' }).select('_id');
     const motherIds = myMothers.map(m => m._id);
 
     const [missedAppointments, openFollowUps] = await Promise.all([
