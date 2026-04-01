@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as childrenController from '../controllers/childrenController';
+import { validate } from '../middleware/validate';
 import { requireAuth, requireRole } from '../middleware/auth';
 
 const router = Router();
@@ -63,6 +64,26 @@ router.post('/register', requireAuth, requireRole('admin', 'doctor', 'chw'), chi
  *         description: List of children
  */
 router.get('/mother/:motherId', requireAuth, requireRole('admin', 'doctor', 'chw'), childrenController.getMotherChildren);
+router.patch(
+  '/:id/growth',
+  requireAuth,
+  requireRole('admin', 'doctor', 'chw'),
+  validate(childrenController.childGrowthSchema),
+  childrenController.updateChildGrowth
+);
+router.post(
+  '/:id/vaccinations',
+  requireAuth,
+  requireRole('admin', 'doctor', 'chw'),
+  validate(childrenController.childVaccinationSchema),
+  childrenController.saveChildVaccination
+);
+router.post(
+  '/:id/guidance-notes',
+  requireAuth,
+  requireRole('admin', 'doctor', 'chw'),
+  validate(childrenController.childGuidanceNoteSchema),
+  childrenController.addChildGuidanceNote
+);
 
 export default router;
-

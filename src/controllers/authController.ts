@@ -23,6 +23,10 @@ function tokenTypeForRole(role: UserRole): TokenType {
   return 'mother';
 }
 
+function generateResetCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
     const { name, email, password, hospitalName } = req.body;
@@ -129,6 +133,53 @@ export async function logout(_req: AuthRequest, res: Response) {
   res.status(200).json({ message: 'Logged out successfully' });
 }
 
+export async function forgotPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email }).select('+passwordResetCode +passwordResetExpiresAt');
+
+    if (user) {
+      user.passwordResetCode = generateResetCode();
+      user.passwordResetExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      await user.save();
+    }
+
+    res.status(200).json({
+      message: 'If an account exists for that email, a reset code has been prepared.',
+      ...(process.env.NODE_ENV !== 'production' && user?.passwordResetCode
+        ? { resetCode: user.passwordResetCode }
+        : null),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resetPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { email, resetCode, password } = req.body;
+
+    const user = await User.findOne({ email }).select('+passwordResetCode +passwordResetExpiresAt');
+    if (!user) throw new ApiError('Invalid reset request', 400);
+
+    const isExpired =
+      !user.passwordResetExpiresAt || user.passwordResetExpiresAt.getTime() < Date.now();
+
+    if (!user.passwordResetCode || user.passwordResetCode !== resetCode || isExpired) {
+      throw new ApiError('Invalid or expired reset code', 400);
+    }
+
+    user.password = password;
+    user.passwordResetCode = undefined;
+    user.passwordResetExpiresAt = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function activatePatient(req: Request, res: Response, next: NextFunction) {
   try {
     const { phone, pinCode, password } = req.body;
@@ -188,6 +239,20 @@ export const activatePatientSchema = z.object({
   body: z.object({
     phone: z.string().min(5),
     pinCode: z.string().length(6),
+    password: passwordSchema,
+  }),
+});
+
+export const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+  }),
+});
+
+export const resetPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    resetCode: z.string().length(6),
     password: passwordSchema,
   }),
 });

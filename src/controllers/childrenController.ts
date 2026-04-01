@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { Child } from '../models/Child';
 import { Mother } from '../models/Mother';
 import { Appointment } from '../models/Appointment';
@@ -98,3 +99,102 @@ export async function getMotherChildren(req: AuthRequest, res: Response, next: N
     next(err);
   }
 }
+
+export async function updateChildGrowth(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const child = await Child.findById(req.params.id);
+    if (!child) throw new ApiError('Child not found', 404);
+
+    const { weightKg, lastWeightAt } = req.body;
+    child.weightKg = weightKg;
+    child.lastWeightAt = lastWeightAt ? new Date(lastWeightAt) : new Date();
+    await child.save();
+
+    res.status(200).json(child);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function saveChildVaccination(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const child = await Child.findById(req.params.id);
+    if (!child) throw new ApiError('Child not found', 404);
+
+    const { vaccine, date, status = 'given' } = req.body;
+    const vaccinationDate = date ? new Date(date) : new Date();
+    const existing = child.vaccinations?.find((item) => item.vaccine === vaccine);
+
+    if (existing) {
+      existing.date = vaccinationDate;
+      existing.status = status;
+    } else {
+      child.vaccinations = [
+        ...(child.vaccinations ?? []),
+        {
+          vaccine,
+          date: vaccinationDate,
+          status,
+        },
+      ];
+    }
+
+    if (status === 'given') {
+      await Appointment.findOneAndUpdate(
+        {
+          child: child._id,
+          type: 'VACCINE',
+          status: 'scheduled',
+          $or: [{ notes: vaccine }, { notes: `Vaccination: ${vaccine}` }],
+        },
+        { status: 'completed' },
+        { sort: { scheduledFor: 1 } }
+      );
+    }
+
+    await child.save();
+    res.status(200).json(child);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function addChildGuidanceNote(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const child = await Child.findById(req.params.id);
+    if (!child) throw new ApiError('Child not found', 404);
+
+    const { topic, note } = req.body;
+    child.caregiverGuidanceNotes = [
+      ...(child.caregiverGuidanceNotes ?? []),
+      { topic, note, createdAt: new Date() },
+    ];
+    await child.save();
+
+    res.status(201).json(child);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export const childGrowthSchema = z.object({
+  body: z.object({
+    weightKg: z.number().min(0),
+    lastWeightAt: z.string().datetime().optional(),
+  }),
+});
+
+export const childVaccinationSchema = z.object({
+  body: z.object({
+    vaccine: z.string().min(1),
+    date: z.string().datetime().optional(),
+    status: z.enum(['scheduled', 'given', 'missed']).optional(),
+  }),
+});
+
+export const childGuidanceNoteSchema = z.object({
+  body: z.object({
+    topic: z.string().min(1),
+    note: z.string().min(1),
+  }),
+});

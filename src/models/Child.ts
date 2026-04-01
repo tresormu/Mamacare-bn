@@ -8,6 +8,7 @@ export interface IChild extends Document {
   weightKg?: number;
   lastWeightAt?: Date;
   vaccinations?: { vaccine: string; date?: Date; status?: 'scheduled' | 'given' | 'missed' }[];
+  caregiverGuidanceNotes?: { topic: string; note: string; createdAt: Date }[];
   archivedAt?: Date;
 }
 
@@ -25,6 +26,16 @@ const ChildSchema = new Schema<IChild>(
           vaccine: { type: String, required: true },
           date: { type: Date },
           status: { type: String, enum: ['scheduled', 'given', 'missed'], default: 'scheduled' },
+        },
+      ],
+      default: [],
+    },
+    caregiverGuidanceNotes: {
+      type: [
+        {
+          topic: { type: String, required: true, trim: true },
+          note: { type: String, required: true, trim: true },
+          createdAt: { type: Date, default: Date.now },
         },
       ],
       default: [],

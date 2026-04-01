@@ -13,6 +13,8 @@ export interface IUser extends Document {
   specialization?: string;
   licenseNumber?: string;
   bio?: string;
+  passwordResetCode?: string;
+  passwordResetExpiresAt?: Date;
   comparePassword: (candidate: string) => Promise<boolean>;
 }
 
@@ -27,6 +29,8 @@ const UserSchema = new Schema<IUser>(
     specialization: { type: String, trim: true },
     licenseNumber: { type: String, trim: true },
     bio: { type: String, trim: true },
+    passwordResetCode: { type: String, select: false },
+    passwordResetExpiresAt: { type: Date, select: false },
   },
   { timestamps: true }
 );

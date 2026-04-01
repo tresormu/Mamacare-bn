@@ -1,7 +1,21 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validate';
-import { login,updateProfile, logout,loginSchema, me, register, registerSchema, activatePatient,activatePatientSchema } from '../controllers/authController';
+import {
+  activatePatient,
+  activatePatientSchema,
+  forgotPassword,
+  forgotPasswordSchema,
+  login,
+  loginSchema,
+  logout,
+  me,
+  register,
+  registerSchema,
+  resetPassword,
+  resetPasswordSchema,
+  updateProfile,
+} from '../controllers/authController';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -62,6 +76,8 @@ router.post('/register', authLimiter, validate(registerSchema), register);
  *         description: Invalid credentials
  */
 router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
 
 /**
  * @openapi
@@ -109,4 +125,3 @@ router.patch('/profile', requireAuth, updateProfile);
 router.post('/patient/activate', authLimiter, validate(activatePatientSchema), activatePatient);
 
 export default router;
-
